@@ -1,0 +1,19 @@
+# Build results
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# dotnet
+*.dll
+*.exe
+*.pdb
+
+# קובץ ההוראות
+*.docx
+
+# Data files
+GatherUp.Infrastructure/Data/events.xml
