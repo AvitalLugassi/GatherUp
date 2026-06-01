@@ -1,3 +1,5 @@
+using GatherUp.Core.Interfaces;
+
 namespace GatherUp.Core.Models;
 
 public class Poll : IIdentifiable

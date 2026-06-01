@@ -23,7 +23,7 @@ public class GatherEvent : IIdentifiable
     public List<Poll> Polls { get; set; } = [];
 
     public decimal TotalCollected => Participants
-        .Where(p => p.PaymentStatus == PaymentStatus.Paid)
+        .Where(p => p.HasPaid)
         .Sum(p => p.AmountPaid);
 
     public decimal TotalOwedToVendors => Vendors.Sum(v => v.AmountOwed);

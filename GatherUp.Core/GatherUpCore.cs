@@ -1,5 +1,6 @@
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
+using GatherUp.Core.Services;
 
 namespace GatherUp.Core;
 
