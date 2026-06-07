@@ -5,7 +5,7 @@ namespace GatherUp.Core.Models;
 
 public class GatherEvent : IIdentifiable
 {
-    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.NewGuid(); //was init
     public string Title { get; set; } = string.Empty;
     public DateTime? EventDate { get; set; }
     public string? Location { get; set; }
@@ -22,10 +22,14 @@ public class GatherEvent : IIdentifiable
     public List<VendorAllocation> Vendors { get; set; } = [];
     public List<Poll> Polls { get; set; } = [];
 
+    [System.Xml.Serialization.XmlIgnore]
     public decimal TotalCollected => Participants
         .Where(p => p.HasPaid)
         .Sum(p => p.AmountPaid);
 
+    [System.Xml.Serialization.XmlIgnore]
     public decimal TotalOwedToVendors => Vendors.Sum(v => v.AmountOwed);
+
+    [System.Xml.Serialization.XmlIgnore]
     public decimal Budget => TotalCollected - TotalOwedToVendors;
 }

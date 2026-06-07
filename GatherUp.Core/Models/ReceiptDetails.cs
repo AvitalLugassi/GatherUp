@@ -1,7 +1,10 @@
+using GatherUp.Core.Interfaces;
+
 namespace GatherUp.Core.Models;
 
 public record ReceiptDetails(
-    string ReceiptNumber,
+    Guid Id,
     decimal Amount,
-    DateTime IssuedAt
-);
+    DateTime IssuedAt,
+    string FilePath
+) : IIdentifiable;

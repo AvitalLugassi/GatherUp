@@ -3,9 +3,16 @@ using GatherUp.Core.Interfaces;
 
 namespace GatherUp.Infrastructure.Repositories;
 
-public class XmlRepository<T>(string filePath) : IRepository<T> where T : class, IIdentifiable
+public class XmlRepository<T> : IRepository<T> where T : class, IIdentifiable
 {
-    private readonly XmlSerializer _serializer = new(typeof(List<T>));
+    protected readonly string filePath;
+    private readonly XmlSerializer? _serializer;
+
+    public XmlRepository(string filePath, bool useSerializer = true)
+    {
+        this.filePath = filePath;
+        if (useSerializer) _serializer = new XmlSerializer(typeof(List<T>));
+    }
 
     private List<T> Load()
     {
@@ -22,16 +29,16 @@ public class XmlRepository<T>(string filePath) : IRepository<T> where T : class,
 
     public IEnumerable<T> GetAll() => Load();
 
-    public T? GetById(Guid id) => Load().FirstOrDefault(x => x.Id == id);
+    public virtual T? GetById(Guid id) => Load().FirstOrDefault(x => x.Id == id);
 
-    public void Add(T entity)
+    public virtual void Add(T entity)
     {
         var data = Load();
         data.Add(entity);
         Save(data);
     }
 
-    public void Update(T entity)
+    public virtual void Update(T entity)
     {
         var data = Load();
         var index = data.FindIndex(x => x.Id == entity.Id);
@@ -40,7 +47,7 @@ public class XmlRepository<T>(string filePath) : IRepository<T> where T : class,
         Save(data);
     }
 
-    public void Delete(Guid id)
+    public virtual void Delete(Guid id)
     {
         var data = Load();
         var removed = data.RemoveAll(x => x.Id == id);

@@ -2,6 +2,6 @@ namespace GatherUp.Core.Interfaces;
 
 public interface IEmailService
 {
-    Task SendAsync(string to, string subject, string htmlBody);
-    Task SendBulkAsync(IEnumerable<string> recipients, string subject, string htmlBody);
+    void Send(string to, string subject, string htmlBody);
+    void SendBulk(IEnumerable<string> recipients, string subject, string htmlBody);
 }
