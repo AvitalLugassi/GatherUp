@@ -1,1 +1,0 @@
-1 what to do with the set methods in fields that we dont want to enable to change them after initialize them
