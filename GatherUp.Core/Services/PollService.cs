@@ -1,9 +1,2 @@
-using GatherUp.Core.Interfaces;
-using GatherUp.Core.Models;
-
-namespace GatherUp.Core.Services;
-
-public class PollService(IRepository<GatherEvent> eventRepo)
-{
-    // TODO: יצירת סקרים, הצבעה, סגירת סקר
-}
+// שירות זה הועבר ל-GatherUp.BL.Services.PollService
+// קובץ זה נשמר ריק — יש להשתמש ב: using GatherUp.BL.Services;

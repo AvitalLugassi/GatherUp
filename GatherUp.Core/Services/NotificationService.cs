@@ -1,9 +1,2 @@
-using GatherUp.Core.Interfaces;
-using GatherUp.Core.Models;
-
-namespace GatherUp.Core.Services;
-
-public class NotificationService(IEmailService emailService, IRepository<GatherEvent> eventRepo)
-{
-    // TODO: שליחת הזמנות, תזכורות תשלום, עדכוני אירוע לפי העדפות
-}
+// שירות זה הועבר ל-GatherUp.BL.Services.NotificationService
+// קובץ זה נשמר ריק — יש להשתמש ב: using GatherUp.BL.Services;

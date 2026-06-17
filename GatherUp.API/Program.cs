@@ -1,7 +1,7 @@
 using GatherUp.API.Endpoints;
+using GatherUp.BL.Services;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
-using GatherUp.Core.Services;
 using GatherUp.Infrastructure.Email;
 using GatherUp.Infrastructure.Repositories;
 

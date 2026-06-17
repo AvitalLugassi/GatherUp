@@ -18,13 +18,13 @@ public class XmlRepository<T> : IRepository<T> where T : class, IIdentifiable
     {
         if (!File.Exists(filePath)) return [];
         using var stream = File.OpenRead(filePath);
-        return (List<T>?)_serializer.Deserialize(stream) ?? [];
+        return (List<T>?)_serializer!.Deserialize(stream) ?? [];
     }
 
     private void Save(List<T> data)
     {
         using var stream = File.Create(filePath);
-        _serializer.Serialize(stream, data);
+        _serializer!.Serialize(stream, data);
     }
 
     public IEnumerable<T> GetAll() => Load();

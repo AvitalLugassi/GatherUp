@@ -1,4 +1,4 @@
-using GatherUp.Core;
+using GatherUp.BL;
 using GatherUp.Core.Enums;
 using GatherUp.Core.Models;
 using GatherUp.Infrastructure.Data;
