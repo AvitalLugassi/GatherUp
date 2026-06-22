@@ -6,9 +6,6 @@ namespace GatherUp.BL.Services;
 
 public class ParticipantService(IRepository<GatherEvent> eventRepo)
 {
-    /// <summary>
-    /// הוספת משתתף לאירוע.
-    /// </summary>
     public Participant AddParticipant(Guid eventId, Participant participant)
     {
         var ev = eventRepo.GetById(eventId)
@@ -34,9 +31,6 @@ public class ParticipantService(IRepository<GatherEvent> eventRepo)
         return ev.Participants;
     }
 
-    /// <summary>
-    /// עדכון RSVP — אישור או דחיית הגעה.
-    /// </summary>
     public void UpdateRsvp(Guid eventId, Guid participantId, bool isAttending)
     {
         var ev = eventRepo.GetById(eventId)

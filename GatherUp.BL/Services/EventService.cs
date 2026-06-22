@@ -35,6 +35,34 @@ public class EventService(IRepository<GatherEvent> eventRepo)
 
     public void Delete(Guid id) => eventRepo.Delete(id);
 
+    public EventHost SetHost(Guid eventId, EventHost host)
+    {
+        var ev = eventRepo.GetById(eventId)
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
+        ev.Host = host;
+        eventRepo.Update(ev);
+        return host;
+    }
+
+    public EventManager AddManager(Guid eventId, EventManager manager)
+    {
+        var ev = eventRepo.GetById(eventId)
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
+        ev.Managers.Add(manager);
+        eventRepo.Update(ev);
+        return manager;
+    }
+
+    public void RemoveManager(Guid eventId, Guid managerId)
+    {
+        var ev = eventRepo.GetById(eventId)
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
+        var manager = ev.Managers.FirstOrDefault(m => m.Id == managerId)
+            ?? throw new NotFoundException($"מנהל {managerId} לא נמצא באירוע.");
+        ev.Managers.Remove(manager);
+        eventRepo.Update(ev);
+    }
+
     public void UpdateStatus(Guid id, EventStatus newStatus)
     {
         var ev = eventRepo.GetById(id)

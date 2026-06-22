@@ -1,5 +1,6 @@
 using GatherUp.BL.Services;
 using GatherUp.Core.Enums;
+using GatherUp.Core.Exceptions;
 using GatherUp.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,9 @@ public class EventsController(EventService eventService, NotificationService not
     public IActionResult GetById(Guid id)
     {
         var ev = eventService.GetById(id);
-        return ev is null ? NotFound() : Ok(ev);
+        return ev is null
+            ? throw new NotFoundException($"אירוע {id} לא נמצא.")
+            : Ok(ev);
     }
 
     [HttpPost]
@@ -34,7 +37,8 @@ public class EventsController(EventService eventService, NotificationService not
     [HttpPut("{id:guid}")]
     public IActionResult Update(Guid id, GatherEvent gatherEvent)
     {
-        if (id != gatherEvent.Id) return BadRequest("מזהה האירוע אינו תואם.");
+        if (id != gatherEvent.Id)
+            throw new ValidationException("מזהה האירוע אינו תואם.");
         if (!IsOwnerOrAdmin(id)) return Forbid();
         return Ok(eventService.Update(gatherEvent));
     }

@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using GatherUp.Core.Exceptions;
 using GatherUp.Core.Models;
 
 namespace GatherUp.Infrastructure.Repositories;
@@ -52,8 +53,8 @@ public class ReceiptXmlRepository : XmlRepository<ReceiptDetails>
     }
 
     public override void Update(ReceiptDetails entity) =>
-        throw new InvalidOperationException("לא ניתן לערוך קבלה לאחר היצירה.");
+        throw new BusinessRuleException("לא ניתן לערוך קבלה לאחר היצירה.");
 
     public override void Delete(Guid id) =>
-        throw new InvalidOperationException("לא ניתן למחוק קבלה לאחר היצירה.");
+        throw new BusinessRuleException("לא ניתן למחוק קבלה לאחר היצירה.");
 }

@@ -72,10 +72,7 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
         emailService.SendBulk(recipients, $"עדכון: {ev.Title}", updateMessage);
     }
 
-    /// <summary>
-    /// שליחת הודעה על סקר חדש למשתתפים שביקשו עדכון על סקרים.
-    /// </summary>
-    public void NotifyNewPoll(Guid eventId, Poll poll)
+     public void NotifyNewPoll(Guid eventId, Poll poll)
     {
         var ev = eventRepo.GetById(eventId)
             ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
