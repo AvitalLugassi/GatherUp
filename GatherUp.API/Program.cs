@@ -34,7 +34,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // --- JWT ---
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "GatherUp_SuperSecret_Key_2024!";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "GatherUp_SuperSecret_Key_2024!@#$";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

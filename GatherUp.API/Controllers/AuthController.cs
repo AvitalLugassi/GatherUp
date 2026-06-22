@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using GatherUp.BL.Services;
+using GatherUp.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -20,6 +21,11 @@ public class AuthController(AuthService authService, IConfiguration configuratio
         if (user is null)
             return Unauthorized("שם משתמש או סיסמה שגויים.");
 
+        return Ok(new { token = GenerateToken(user) });
+    }
+
+    private string GenerateToken(AppUser user)
+    {
         var key = configuration["Jwt:Key"] ?? "GatherUp_SuperSecret_Key_2024!@#$";
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
 
@@ -36,7 +42,7 @@ public class AuthController(AuthService authService, IConfiguration configuratio
             signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256)
         );
 
-        return Ok(new { token = new JwtSecurityTokenHandler().WriteToken(token) });
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
 
