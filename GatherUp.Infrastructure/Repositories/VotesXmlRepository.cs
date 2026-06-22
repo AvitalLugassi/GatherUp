@@ -2,11 +2,6 @@ using System.Xml.Linq;
 
 namespace GatherUp.Infrastructure.Repositories;
 
-/// <summary>
-/// שומר את תשובות המשתתפים בסקרים בקובץ XML נפרד.
-/// VotesByParticipant על PollQuestion הוא [XmlIgnore] — לכן הוא לא נשמר
-/// בתוך events.xml. כל הצבעה נשמרת כאן בנפרד.
-/// </summary>
 public class VotesXmlRepository
 {
     private readonly string _filePath;

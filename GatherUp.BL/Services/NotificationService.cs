@@ -1,4 +1,5 @@
 using GatherUp.Core.Enums;
+using GatherUp.Core.Exceptions;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
 
@@ -12,10 +13,10 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
     public void SendInvitations(Guid eventId)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         if (ev.Host is null)
-            throw new InvalidOperationException("לא ניתן לשלוח הזמנות ללא בעל אירוע.");
+            throw new BusinessRuleException("לא ניתן לשלוח הזמנות ללא בעל אירוע.");
 
         var recipients = ev.Participants
             .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.EventChanges))
@@ -39,7 +40,7 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
     public void SendPaymentReminders(Guid eventId)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         var unpaid = ev.Participants
             .Where(p => !p.HasPaid && p.IsAttending == true)
@@ -59,7 +60,7 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
     public void SendEventUpdate(Guid eventId, string updateMessage)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         var recipients = ev.Participants
             .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.EventChanges))
@@ -77,7 +78,7 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
     public void NotifyNewPoll(Guid eventId, Poll poll)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         var recipients = ev.Participants
             .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.NewPolls))

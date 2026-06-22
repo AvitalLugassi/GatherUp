@@ -1,3 +1,4 @@
+using GatherUp.Core.Exceptions;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
 
@@ -8,10 +9,10 @@ public class PollService(IRepository<GatherEvent> eventRepo)
     public Poll AddPoll(Guid eventId, Poll poll)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         if (string.IsNullOrWhiteSpace(poll.Title))
-            throw new ArgumentException("כותרת הסקר היא שדה חובה.");
+            throw new ValidationException("כותרת הסקר היא שדה חובה.");
 
         ev.Polls.Add(poll);
         eventRepo.Update(ev);
@@ -21,7 +22,7 @@ public class PollService(IRepository<GatherEvent> eventRepo)
     public IEnumerable<Poll> GetPolls(Guid eventId)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
         return ev.Polls;
     }
 
@@ -31,19 +32,19 @@ public class PollService(IRepository<GatherEvent> eventRepo)
     public void Vote(Guid eventId, Guid pollId, Guid questionId, Guid participantId, string answer)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         var poll = ev.Polls.FirstOrDefault(p => p.Id == pollId)
-            ?? throw new KeyNotFoundException($"סקר {pollId} לא נמצא.");
+            ?? throw new NotFoundException($"סקר {pollId} לא נמצא.");
 
         if (poll.IsClosed)
-            throw new InvalidOperationException("הסקר סגור ולא ניתן להצביע.");
+            throw new BusinessRuleException("הסקר סגור ולא ניתן להצביע.");
 
         var question = poll.Questions.FirstOrDefault(q => q.Id == questionId)
-            ?? throw new KeyNotFoundException($"שאלה {questionId} לא נמצאה.");
+            ?? throw new NotFoundException($"שאלה {questionId} לא נמצאה.");
 
         if (!question.Options.Contains(answer))
-            throw new ArgumentException($"תשובה '{answer}' אינה אפשרות חוקית.");
+            throw new ValidationException($"תשובה '{answer}' אינה אפשרות חוקית.");
 
         question.VotesByParticipant[participantId] = answer;
 
@@ -55,13 +56,13 @@ public class PollService(IRepository<GatherEvent> eventRepo)
     public Dictionary<string, int> GetResults(Guid eventId, Guid pollId, Guid questionId)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         var poll = ev.Polls.FirstOrDefault(p => p.Id == pollId)
-            ?? throw new KeyNotFoundException($"סקר {pollId} לא נמצא.");
+            ?? throw new NotFoundException($"סקר {pollId} לא נמצא.");
 
         var question = poll.Questions.FirstOrDefault(q => q.Id == questionId)
-            ?? throw new KeyNotFoundException($"שאלה {questionId} לא נמצאה.");
+            ?? throw new NotFoundException($"שאלה {questionId} לא נמצאה.");
 
         return question.VotesByParticipant
             .GroupBy(v => v.Value)

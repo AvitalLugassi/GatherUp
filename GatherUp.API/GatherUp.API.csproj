@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GatherUp.Core\GatherUp.Core.csproj" />
     <ProjectReference Include="..\GatherUp.BL\GatherUp.BL.csproj" />
     <ProjectReference Include="..\GatherUp.Infrastructure\GatherUp.Infrastructure.csproj" />

@@ -1,3 +1,4 @@
+using GatherUp.Core.Exceptions;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
 
@@ -11,15 +12,15 @@ public class ParticipantService(IRepository<GatherEvent> eventRepo)
     public Participant AddParticipant(Guid eventId, Participant participant)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         if (string.IsNullOrWhiteSpace(participant.Name))
-            throw new ArgumentException("שם המשתתף הוא שדה חובה.");
+            throw new ValidationException("שם המשתתף הוא שדה חובה.");
         if (string.IsNullOrWhiteSpace(participant.Email))
-            throw new ArgumentException("אימייל המשתתף הוא שדה חובה.");
+            throw new ValidationException("אימייל המשתתף הוא שדה חובה.");
 
         if (ev.Participants.Any(p => p.Email == participant.Email))
-            throw new InvalidOperationException($"משתתף עם האימייל '{participant.Email}' כבר קיים באירוע.");
+            throw new BusinessRuleException($"משתתף עם האימייל '{participant.Email}' כבר קיים באירוע.");
 
         ev.Participants.Add(participant);
         eventRepo.Update(ev);
@@ -29,7 +30,7 @@ public class ParticipantService(IRepository<GatherEvent> eventRepo)
     public IEnumerable<Participant> GetParticipants(Guid eventId)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
         return ev.Participants;
     }
 
@@ -39,10 +40,10 @@ public class ParticipantService(IRepository<GatherEvent> eventRepo)
     public void UpdateRsvp(Guid eventId, Guid participantId, bool isAttending)
     {
         var ev = eventRepo.GetById(eventId)
-            ?? throw new KeyNotFoundException($"אירוע {eventId} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         var participant = ev.Participants.FirstOrDefault(p => p.Id == participantId)
-            ?? throw new KeyNotFoundException($"משתתף {participantId} לא נמצא.");
+            ?? throw new NotFoundException($"משתתף {participantId} לא נמצא.");
 
         participant.IsAttending = isAttending;
         eventRepo.Update(ev);

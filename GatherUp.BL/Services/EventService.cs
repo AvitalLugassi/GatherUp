@@ -1,4 +1,5 @@
 using GatherUp.Core.Enums;
+using GatherUp.Core.Exceptions;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
 
@@ -13,11 +14,11 @@ public class EventService(IRepository<GatherEvent> eventRepo)
     public GatherEvent Create(GatherEvent gatherEvent)
     {
         if (string.IsNullOrWhiteSpace(gatherEvent.Title))
-            throw new ArgumentException("כותרת האירוע היא שדה חובה.");
+            throw new ValidationException("כותרת האירוע היא שדה חובה.");
         if (gatherEvent.EventDate is null)
-            throw new ArgumentException("תאריך האירוע הוא שדה חובה.");
+            throw new ValidationException("תאריך האירוע הוא שדה חובה.");
         if (gatherEvent.Location is null || string.IsNullOrWhiteSpace(gatherEvent.Location))
-            throw new ArgumentException("מיקום האירוע הוא שדה חובה.");
+            throw new ValidationException("מיקום האירוע הוא שדה חובה.");
 
         eventRepo.Add(gatherEvent);
         return gatherEvent;
@@ -26,7 +27,7 @@ public class EventService(IRepository<GatherEvent> eventRepo)
     public GatherEvent Update(GatherEvent gatherEvent)
     {
         if (string.IsNullOrWhiteSpace(gatherEvent.Title))
-            throw new ArgumentException("כותרת האירוע היא שדה חובה.");
+            throw new ValidationException("כותרת האירוע היא שדה חובה.");
 
         eventRepo.Update(gatherEvent);
         return gatherEvent;
@@ -37,7 +38,7 @@ public class EventService(IRepository<GatherEvent> eventRepo)
     public void UpdateStatus(Guid id, EventStatus newStatus)
     {
         var ev = eventRepo.GetById(id)
-            ?? throw new KeyNotFoundException($"אירוע {id} לא נמצא.");
+            ?? throw new NotFoundException($"אירוע {id} לא נמצא.");
         ev.Status = newStatus;
         eventRepo.Update(ev);
     }
