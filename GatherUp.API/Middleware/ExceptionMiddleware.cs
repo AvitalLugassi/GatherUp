@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace GatherUp.API.Middleware;
 
-public class ExceptionMiddleware(RequestDelegate next)
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
     public async Task InvokeAsync(HttpContext context)
     {
@@ -13,6 +13,7 @@ public class ExceptionMiddleware(RequestDelegate next)
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
             await HandleExceptionAsync(context, ex);
         }
     }

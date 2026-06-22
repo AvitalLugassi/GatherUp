@@ -20,7 +20,7 @@ public class AuthController(AuthService authService, IConfiguration configuratio
         if (user is null)
             return Unauthorized("שם משתמש או סיסמה שגויים.");
 
-        var key = configuration["Jwt:Key"] ?? "GatherUp_SuperSecret_Key_2024!";
+        var key = configuration["Jwt:Key"] ?? "GatherUp_SuperSecret_Key_2024!@#$";
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
 
         var claims = new[]
