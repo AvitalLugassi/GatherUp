@@ -1,3 +1,4 @@
+using GatherUp.Core.Enums;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
 
@@ -17,7 +18,7 @@ public class AuthService(IUserRepository userRepository, IEmailService emailServ
     /// Admin יוצר משתמש חדש. מחזיר את הסיסמה הזמנית ושולח מייל למשתמש.
     /// </summary>
     public (AppUser user, string plainPassword) CreateUser(
-        string username, string role = "User", string email = "")
+        string username, UserRole role, string email = "")
     {
         if (userRepository.GetByUsername(username) is not null)
             throw new Core.Exceptions.BusinessRuleException($"שם המשתמש '{username}' כבר קיים.");
@@ -32,7 +33,6 @@ public class AuthService(IUserRepository userRepository, IEmailService emailServ
         };
         userRepository.Add(user);
 
-        // שליחת מייל עם פרטי ההתחברות, אם סופק מייל
         if (!string.IsNullOrWhiteSpace(email))
         {
             var subject = "ברוכים הבאים ל-GatherUp — פרטי ההתחברות שלך";

@@ -12,112 +12,132 @@ export function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const navigate = useNavigate()
-  const { isAdmin, username } = useAuth()
+  const { canManage, userId, username } = useAuth()
 
   useEffect(() => {
     eventsApi.getAll()
       .then(all => {
-        if (isAdmin) {
+        if (canManage) {
           setEvents(all)
         } else {
-          // משתמש רגיל רואה רק אירועים שהוא משתתף בהם
-          // username שווה ל-email כי כך נוצר החשבון (username = email)
+          // Participant ו-Host רואים רק אירועים שהם שייכים אליהם
           const mine = all.filter(ev =>
-            ev.participants?.some(p =>
-              p.email?.toLowerCase() === username?.toLowerCase()
-            )
+            ev.participants?.some(p => p.appUserId === userId || p.email?.toLowerCase() === username?.toLowerCase()) ||
+            ev.host?.appUserId === userId
           )
           setEvents(mine)
         }
       })
       .catch(() => setError('שגיאה בטעינת האירועים'))
       .finally(() => setLoading(false))
-  }, [isAdmin, username])
+  }, [canManage, userId, username])
 
   if (loading) return (
-    <div className="flex justify-center items-center h-64">
-      <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+    <div className="flex flex-col justify-center items-center h-64 gap-4">
+      <div className="w-12 h-12 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-gray-400 text-sm">טוען אירועים...</p>
     </div>
   )
 
   if (error) return (
-    <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-4">{error}</div>
+    <div className="bg-red-50 border border-red-200 text-red-600 rounded-2xl p-6 text-center">{error}</div>
   )
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">
-          {isAdmin ? 'כל האירועים' : 'האירועים שלי'}
-        </h1>
-        {isAdmin && (
-          <Button onClick={() => navigate('/events/new')}>+ אירוע חדש</Button>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {canManage ? 'כל האירועים' : 'האירועים שלי'}
+          </h1>
+          <p className="text-gray-500 mt-1 text-sm">
+            {events.length > 0 ? `${events.length} אירועים` : ''}
+          </p>
+        </div>
+        {canManage && (
+          <Button onClick={() => navigate('/events/new')} size="lg">
+            + אירוע חדש
+          </Button>
         )}
       </div>
 
       {events.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="text-5xl mb-4">📅</div>
-          <p className="text-gray-500 mb-1">
-            {isAdmin ? 'אין אירועים עדיין' : 'אין אירועים שאת/ה משתתף/ת בהם'}
+        <Card className="p-16 text-center">
+          <div className="text-6xl mb-5">📅</div>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            {canManage ? 'אין אירועים עדיין' : 'אין אירועים שאת/ה משתתף/ת בהם'}
+          </h3>
+          <p className="text-gray-400 text-sm mb-6">
+            {canManage ? 'צור את האירוע הראשון שלך' : 'כשמנהל יוסיף אותך לאירוע, הוא יופיע כאן'}
           </p>
-          {!isAdmin && (
-            <p className="text-xs text-gray-400">
-              כשמנהל יוסיף אותך לאירוע, הוא יופיע כאן
-            </p>
-          )}
-          {isAdmin && (
-            <Button className="mt-4" onClick={() => navigate('/events/new')}>
-              צור אירוע ראשון
-            </Button>
+          {canManage && (
+            <Button onClick={() => navigate('/events/new')}>צור אירוע ראשון</Button>
           )}
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map(event => (
-            <Card
-              key={event.id}
-              className="p-5 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all"
-              onClick={() => navigate(`/events/${event.id}`)}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <h2 className="font-semibold text-gray-800 text-lg leading-tight">{event.title}</h2>
-                <StatusBadge status={event.status} />
-              </div>
-              <div className="space-y-1 text-sm text-gray-500">
-                {event.eventDate && (
-                  <p>📅 {new Date(event.eventDate).toLocaleDateString('he-IL')}</p>
-                )}
-                {event.location && <p>📍 {event.location}</p>}
-                <p>👥 {event.participants?.length ?? 0} משתתפים</p>
-                {event.pricePerParticipant != null && event.pricePerParticipant > 0 && (
-                  <p>💰 ₪{event.pricePerParticipant} לאדם</p>
-                )}
-              </div>
-              <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
-                <span className="text-xs text-indigo-500 font-medium">
-                  {isAdmin ? 'לחץ לניהול →' : 'לחץ לפרטים →'}
-                </span>
-                {!isAdmin && event.participants && (() => {
-                  const me = event.participants.find(
-                    p => p.email?.toLowerCase() === username?.toLowerCase()
-                  )
-                  if (!me) return null
-                  return (
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      me.isAttending === true
-                        ? 'bg-green-100 text-green-700'
-                        : me.isAttending === false
-                          ? 'bg-red-100 text-red-600'
-                          : 'bg-yellow-100 text-yellow-700'
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {events.map(event => {
+            const myParticipant = event.participants?.find(
+              p => p.appUserId === userId || p.email?.toLowerCase() === username?.toLowerCase()
+            )
+            return (
+              <Card
+                key={event.id}
+                className="p-6 cursor-pointer group hover:-translate-y-1 hover:shadow-xl hover:shadow-violet-100/50 transition-all duration-200"
+                onClick={() => navigate(`/events/${event.id}`)}
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <h2 className="font-bold text-gray-800 text-lg leading-tight group-hover:text-violet-700 transition-colors">
+                    {event.title}
+                  </h2>
+                  <StatusBadge status={event.status} />
+                </div>
+
+                <div className="space-y-2 text-sm text-gray-500 mb-4">
+                  {event.eventDate && (
+                    <p className="flex items-center gap-2">
+                      <span className="w-5 text-center">📅</span>
+                      {new Date(event.eventDate).toLocaleDateString('he-IL')}
+                    </p>
+                  )}
+                  {event.location && (
+                    <p className="flex items-center gap-2">
+                      <span className="w-5 text-center">📍</span>
+                      {event.location}
+                    </p>
+                  )}
+                  <p className="flex items-center gap-2">
+                    <span className="w-5 text-center">👥</span>
+                    {event.participants?.length ?? 0} משתתפים
+                  </p>
+                  {event.pricePerParticipant != null && event.pricePerParticipant > 0 && (
+                    <p className="flex items-center gap-2">
+                      <span className="w-5 text-center">💰</span>
+                      ₪{event.pricePerParticipant} לאדם
+                    </p>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
+                  <span className="text-xs text-violet-500 font-semibold group-hover:text-violet-700 transition-colors">
+                    {canManage ? 'לניהול ←' : 'לפרטים ←'}
+                  </span>
+                  {myParticipant && (
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium border ${
+                      myParticipant.isAttending === true
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : myParticipant.isAttending === false
+                          ? 'bg-red-50 text-red-600 border-red-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
-                      {me.isAttending === true ? '✓ אישרתי הגעה' : me.isAttending === false ? '✗ דחיתי' : '? טרם הגבתי'}
+                      {myParticipant.isAttending === true ? '✓ אישרתי' : myParticipant.isAttending === false ? '✕ דחיתי' : '? טרם הגבתי'}
                     </span>
-                  )
-                })()}
-              </div>
-            </Card>
-          ))}
+                  )}
+                </div>
+              </Card>
+            )
+          })}
         </div>
       )}
     </div>

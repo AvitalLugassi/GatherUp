@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { eventsApi } from '../../api/events'
 import { usersApi } from '../../api/users'
 import type { GatherEvent, Participant } from '../../types'
+import { NotificationPreference } from '../../types'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -17,21 +18,25 @@ interface AddedResult {
 }
 
 export function ParticipantsTab({ event, onReload }: Props) {
-  const { isAdmin, username } = useAuth()
+  const { canManage, userId, username } = useAuth()
   const [showAdd, setShowAdd] = useState(false)
   const [addLoading, setAddLoading] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({ name: '', email: '', idNumber: '' })
   const [addedResult, setAddedResult] = useState<AddedResult | null>(null)
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null)
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [localNotifPrefs, setLocalNotifPrefs] = useState<NotificationPreference | null>(null)
 
   const participants: Participant[] = event.participants ?? []
 
-  // המשתתף המחובר כרגע (מזוהה לפי username = email)
+  // המשתתף המחובר — מזוהה לפי AppUserId קודם, אחרי כן לפי email
   const currentParticipant = participants.find(
-    p => p.email?.toLowerCase() === username?.toLowerCase() ||
-         p.name?.toLowerCase() === username?.toLowerCase()
+    p => (userId && p.appUserId === userId) ||
+         p.email?.toLowerCase() === username?.toLowerCase()
   )
+
+  const effectiveNotifPrefs = localNotifPrefs ?? currentParticipant?.notificationPreferences ?? 0
 
   async function handleAdd() {
     setError('')
@@ -88,17 +93,17 @@ export function ParticipantsTab({ event, onReload }: Props) {
           <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full">💳 שילמו: {paid}</span>
         </div>
         <div className="flex gap-2">
-          {isAdmin && (
+          {canManage && (
             <Button variant="secondary" onClick={sendReminders}>שלח תזכורות תשלום</Button>
           )}
-          {isAdmin && (
+          {canManage && (
             <Button onClick={() => setShowAdd(true)}>+ הוסף משתתף</Button>
           )}
         </div>
       </div>
 
       {/* כרטיס אישור הגעה עצמי — למשתמש שהוא משתתף */}
-      {!isAdmin && currentParticipant && (
+      {!canManage && currentParticipant && (
         <Card className="p-5 mb-4 border-indigo-100 bg-indigo-50">
           <p className="text-sm font-medium text-indigo-800 mb-3">
             הגעתך לאירוע — {currentParticipant.name}
@@ -126,6 +131,39 @@ export function ParticipantsTab({ event, onReload }: Props) {
           {currentParticipant.isAttending === false && (
             <p className="text-xs text-red-600 mt-2">✗ ציינת שלא תגיע</p>
           )}
+
+          {/* העדפות התראות */}
+          <div className="mt-4 pt-4 border-t border-indigo-200">
+            <p className="text-xs font-medium text-indigo-700 mb-2">קבל התראות במייל:</p>
+            <div className="flex flex-wrap gap-4">
+              {([
+                { flag: NotificationPreference.EventChanges,   label: 'שינויים באירוע' },
+                { flag: NotificationPreference.NewPolls,       label: 'סקר חדש' },
+              ] as const).map(({ flag, label }) => (
+                <label key={flag} className="flex items-center gap-2 cursor-pointer text-xs text-indigo-800">
+                  <input
+                    type="checkbox"
+                    checked={!!(effectiveNotifPrefs & flag)}
+                    disabled={notifLoading}
+                    onChange={async () => {
+                      const newPref = (effectiveNotifPrefs ^ flag) as NotificationPreference
+                      setLocalNotifPrefs(newPref)
+                      setNotifLoading(true)
+                      try {
+                        await eventsApi.updateParticipantNotifications(event.id, currentParticipant.id, newPref)
+                        onReload()
+                      } catch {
+                        setLocalNotifPrefs(effectiveNotifPrefs) // rollback
+                      } finally {
+                        setNotifLoading(false)
+                      }
+                    }}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
         </Card>
       )}
 
@@ -140,7 +178,7 @@ export function ParticipantsTab({ event, onReload }: Props) {
                 <th className="px-4 py-3 font-medium">אימייל</th>
                 <th className="px-4 py-3 font-medium">הגעה</th>
                 <th className="px-4 py-3 font-medium">תשלום</th>
-                {isAdmin && <th className="px-4 py-3 font-medium">פעולות</th>}
+                {canManage && <th className="px-4 py-3 font-medium">פעולות</th>}
               </tr>
             </thead>
             <tbody>
@@ -164,7 +202,7 @@ export function ParticipantsTab({ event, onReload }: Props) {
                       : <span className="text-gray-400">טרם שילם</span>
                     }
                   </td>
-                  {isAdmin && (
+                  {canManage && (
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
                         {p.isAttending !== true && (

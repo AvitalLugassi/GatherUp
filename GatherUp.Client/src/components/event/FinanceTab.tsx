@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext'
 interface Props { event: GatherEvent; onReload: () => void }
 
 export function FinanceTab({ event, onReload }: Props) {
-  const { isAdmin, username } = useAuth()
+  const { canManage, username } = useAuth()
   const [showVendor, setShowVendor] = useState(false)
   const [showPayment, setShowPayment] = useState<Participant | null>(null)
   const [vendorForm, setVendorForm] = useState({ name: '', amountOwed: '' })
@@ -65,7 +65,7 @@ export function FinanceTab({ event, onReload }: Props) {
   }
 
   // תצוגה למשתמש רגיל — רק פרטי התשלום שלו
-  if (!isAdmin) {
+  if (!canManage) {
     if (!currentParticipant) {
       return (
         <Card className="p-8 text-center text-gray-400">

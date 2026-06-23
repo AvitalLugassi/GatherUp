@@ -61,7 +61,6 @@ builder.Services.AddSingleton(
     _ => new VotesXmlRepository(Path.Combine(dataPath, "votes.xml")));
 
 // --- Infrastructure ---
-// --- Infrastructure ---
 var emailConfig = builder.Configuration.GetSection("Email");
 builder.Services.AddSingleton<IEmailService>(_ => new EmailService(
     emailConfig["From"]!,
@@ -71,12 +70,14 @@ builder.Services.AddSingleton<IEmailService>(_ => new EmailService(
 ));
 
 // --- Services ---
+builder.Services.AddSingleton<IEventNotifier, EventNotifier>();
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<ParticipantService>();
 builder.Services.AddScoped<PollService>();
 builder.Services.AddScoped<FinanceService>();
-builder.Services.AddScoped<NotificationService>();
+builder.Services.AddSingleton<NotificationService>(); // Singleton כי נרשם ל-events
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AuthorizationService>();
 
 var app = builder.Build();
 
@@ -90,6 +91,9 @@ app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// רישום NotificationService לכל ה-events — פעם אחת ב-startup
+app.Services.GetRequiredService<NotificationService>().RegisterToEvents();
 
 app.MapControllers();
 

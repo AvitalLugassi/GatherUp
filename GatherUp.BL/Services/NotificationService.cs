@@ -1,15 +1,138 @@
 using GatherUp.Core.Enums;
+using GatherUp.Core.Events;
 using GatherUp.Core.Exceptions;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
 
 namespace GatherUp.BL.Services;
 
-public class NotificationService(IEmailService emailService, IRepository<GatherEvent> eventRepo)
+public class NotificationService(
+    IEmailService emailService,
+    IRepository<GatherEvent> eventRepo,
+    IEventNotifier notifier)
 {
     /// <summary>
-    /// שליחת הזמנות לכל המשתתפים שבחרו לקבל עדכונים על שינויי אירוע.
+    /// רישום לכל ה-events — נקרא פעם אחת ב-startup.
     /// </summary>
+    public void RegisterToEvents()
+    {
+        notifier.OnRsvpReceived    += HandleRsvp;
+        notifier.OnPaymentReceived += HandlePayment;
+        notifier.OnVoteSubmitted   += HandleVote;
+        notifier.OnPollCreated     += HandlePollCreated;
+        notifier.OnEventUpdated    += HandleEventUpdated;
+    }
+
+    // ── Handlers ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// אישור הגעה — שולח למנהלים שביקשו לדעת.
+    /// </summary>
+    private void HandleRsvp(object? sender, RsvpEventArgs e)
+    {
+        var ev = eventRepo.GetById(e.EventId);
+        if (ev is null) return;
+
+        var recipients = ev.Managers
+            .Where(m => m.NotificationPreferences.HasFlag(ManagerNotificationPreference.RsvpReceived)
+                     && !string.IsNullOrWhiteSpace(m.Email))
+            .Select(m => m.Email)
+            .ToList();
+
+        if (recipients.Count == 0) return;
+
+        var status = e.IsAttending ? "אישר הגעה ✓" : "דחה הגעה ✗";
+        emailService.SendBulk(recipients,
+            $"עדכון הגעה — {ev.Title}",
+            $"<div dir='rtl'><p>המשתתף <strong>{e.ParticipantName}</strong> {status} לאירוע <strong>{ev.Title}</strong>.</p></div>");
+    }
+
+    /// <summary>
+    /// תשלום בוצע — שולח למנהלים שביקשו לדעת.
+    /// </summary>
+    private void HandlePayment(object? sender, PaymentEventArgs e)
+    {
+        var ev = eventRepo.GetById(e.EventId);
+        if (ev is null) return;
+
+        var recipients = ev.Managers
+            .Where(m => m.NotificationPreferences.HasFlag(ManagerNotificationPreference.PaymentReceived)
+                     && !string.IsNullOrWhiteSpace(m.Email))
+            .Select(m => m.Email)
+            .ToList();
+
+        if (recipients.Count == 0) return;
+
+        emailService.SendBulk(recipients,
+            $"תשלום התקבל — {ev.Title}",
+            $"<div dir='rtl'><p>המשתתף <strong>{e.ParticipantName}</strong> שילם ₪{e.Amount} לאירוע <strong>{ev.Title}</strong>.</p></div>");
+    }
+
+    /// <summary>
+    /// הצבעה בסקר — שולח למנהלים שביקשו לדעת.
+    /// </summary>
+    private void HandleVote(object? sender, VoteEventArgs e)
+    {
+        var ev = eventRepo.GetById(e.EventId);
+        if (ev is null) return;
+
+        var recipients = ev.Managers
+            .Where(m => m.NotificationPreferences.HasFlag(ManagerNotificationPreference.VoteSubmitted)
+                     && !string.IsNullOrWhiteSpace(m.Email))
+            .Select(m => m.Email)
+            .ToList();
+
+        if (recipients.Count == 0) return;
+
+        emailService.SendBulk(recipients,
+            $"הצבעה חדשה בסקר — {ev.Title}",
+            $"<div dir='rtl'><p>המשתתף <strong>{e.ParticipantName}</strong> הצביע <strong>{e.Answer}</strong> בסקר <strong>{e.PollTitle}</strong>.</p></div>");
+    }
+
+    /// <summary>
+    /// סקר חדש נוצר — שולח למשתתפים שביקשו לדעת.
+    /// </summary>
+    private void HandlePollCreated(object? sender, PollCreatedEventArgs e)
+    {
+        var ev = eventRepo.GetById(e.EventId);
+        if (ev is null) return;
+
+        var recipients = ev.Participants
+            .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.NewPolls)
+                     && !string.IsNullOrWhiteSpace(p.Email))
+            .Select(p => p.Email)
+            .ToList();
+
+        if (recipients.Count == 0) return;
+
+        emailService.SendBulk(recipients,
+            $"סקר חדש — {e.EventTitle}",
+            $"<div dir='rtl'><p>נפתח סקר חדש: <strong>{e.PollTitle}</strong> באירוע <strong>{e.EventTitle}</strong>.</p></div>");
+    }
+
+    /// <summary>
+    /// פרטי אירוע עודכנו — שולח למשתתפים שביקשו לדעת.
+    /// </summary>
+    private void HandleEventUpdated(object? sender, EventUpdatedEventArgs e)
+    {
+        var ev = eventRepo.GetById(e.EventId);
+        if (ev is null) return;
+
+        var recipients = ev.Participants
+            .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.EventChanges)
+                     && !string.IsNullOrWhiteSpace(p.Email))
+            .Select(p => p.Email)
+            .ToList();
+
+        if (recipients.Count == 0) return;
+
+        emailService.SendBulk(recipients,
+            $"עדכון פרטי אירוע — {e.EventTitle}",
+            $"<div dir='rtl'><p>פרטי האירוע <strong>{e.EventTitle}</strong> עודכנו. היכנסו למערכת לפרטים.</p></div>");
+    }
+
+    // ── שליחות ישירות (אינן דרך events) ────────────────────────────────────
+
     public void SendInvitations(Guid eventId)
     {
         var ev = eventRepo.GetById(eventId)
@@ -19,44 +142,31 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
             throw new BusinessRuleException("לא ניתן לשלוח הזמנות ללא בעל אירוע.");
 
         var recipients = ev.Participants
-            .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.EventChanges))
+            .Where(p => !string.IsNullOrWhiteSpace(p.Email))
             .Select(p => p.Email)
             .ToList();
 
         if (recipients.Count == 0) return;
 
-        var subject = $"הזמנה: {ev.Title}";
-        var body = BuildInvitationBody(ev);
-
-        emailService.SendBulk(recipients, subject, body);
+        emailService.SendBulk(recipients, $"הזמנה: {ev.Title}", BuildInvitationBody(ev));
 
         ev.Status = EventStatus.InvitationsSent;
         eventRepo.Update(ev);
     }
 
-    /// <summary>
-    /// שליחת תזכורות תשלום למשתתפים שעדיין לא שילמו.
-    /// </summary>
     public void SendPaymentReminders(Guid eventId)
     {
         var ev = eventRepo.GetById(eventId)
             ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
-        var unpaid = ev.Participants
-            .Where(p => !p.HasPaid && p.IsAttending == true)
-            .ToList();
-
-        foreach (var participant in unpaid)
-        {
-            var subject = $"תזכורת תשלום - {ev.Title}";
-            var body = $"שלום {participant.Name},\n\nהסכום לתשלום: {ev.PricePerParticipant}₪\n\nתודה!";
-            emailService.Send(participant.Email, subject, body);
-        }
+        ev.Participants
+            .Where(p => !p.HasPaid && p.IsAttending == true && !string.IsNullOrWhiteSpace(p.Email))
+            .ToList()
+            .ForEach(p => emailService.Send(p.Email,
+                $"תזכורת תשלום — {ev.Title}",
+                $"<div dir='rtl'><p>שלום {p.Name}, הסכום לתשלום: ₪{ev.PricePerParticipant}</p></div>"));
     }
 
-    /// <summary>
-    /// שליחת עדכון לכל המשתתפים (ללא קשר להעדפות התראה).
-    /// </summary>
     public void SendEventUpdate(Guid eventId, string updateMessage)
     {
         var ev = eventRepo.GetById(eventId)
@@ -72,26 +182,6 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
         emailService.SendBulk(recipients, $"עדכון: {ev.Title}", updateMessage);
     }
 
-    public void NotifyNewPoll(Guid eventId, Poll poll)
-    {
-        var ev = eventRepo.GetById(eventId)
-            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
-
-        var recipients = ev.Participants
-            .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.NewPolls))
-            .Select(p => p.Email)
-            .ToList();
-
-        if (recipients.Count == 0) return;
-
-        var subject = $"סקר חדש: {poll.Title}";
-        var body = $"נפתח סקר חדש '{poll.Title}' לאירוע '{ev.Title}'.\nהסקר פתוח עד: {poll.ClosesAt?.ToShortDateString()}";
-        emailService.SendBulk(recipients, subject, body);
-    }
-
-    /// <summary>
-    /// שולח למשתתף מייל ברגע שנרשם לאירוע, עם שם המשתמש והסיסמה שלו.
-    /// </summary>
     public void SendWelcomeToParticipant(Guid eventId, Participant participant)
     {
         var ev = eventRepo.GetById(eventId)
@@ -99,38 +189,24 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
 
         if (string.IsNullOrWhiteSpace(participant.Email)) return;
 
-        var subject = $"הוזמנת לאירוע: {ev.Title}";
         var body = $@"<div dir='rtl'>
 <h2>שלום {participant.Name},</h2>
 <p>נרשמת לאירוע <strong>{ev.Title}</strong>.</p>
 {(ev.EventDate.HasValue ? $"<p>📅 תאריך: {ev.EventDate.Value.ToShortDateString()}</p>" : "")}
 {(!string.IsNullOrWhiteSpace(ev.Location) ? $"<p>📍 מיקום: {ev.Location}</p>" : "")}
 {(ev.PricePerParticipant.HasValue ? $"<p>💰 עלות: ₪{ev.PricePerParticipant}</p>" : "")}
-{(!string.IsNullOrWhiteSpace(ev.CustomMessage) ? $"<p>{ev.CustomMessage}</p>" : "")}
-<hr/>
-<p><strong>פרטי כניסה למערכת:</strong></p>
-<p>שם משתמש: {participant.Email}</p>
-<p>(הסיסמה שלך נשלחה אליך בנפרד, אם נוצר עבורך חשבון)</p>
 </div>";
 
-        emailService.Send(participant.Email, subject, body);
+        emailService.Send(participant.Email, $"הוזמנת לאירוע: {ev.Title}", body);
     }
 
-    private static string BuildInvitationBody(GatherEvent ev)
-    {
-        var lines = new List<string>
+    private static string BuildInvitationBody(GatherEvent ev) =>
+        string.Join("\n", new[]
         {
             $"הזמנה לאירוע: {ev.Title}",
             $"תאריך: {ev.EventDate?.ToShortDateString()}",
-            $"מיקום: {ev.Location}"
-        };
-
-        if (!string.IsNullOrWhiteSpace(ev.CustomMessage))
-            lines.Add(ev.CustomMessage);
-
-        if (ev.PricePerParticipant.HasValue)
-            lines.Add($"עלות השתתפות: {ev.PricePerParticipant}₪");
-
-        return string.Join("\n", lines);
-    }
+            $"מיקום: {ev.Location}",
+            ev.CustomMessage ?? "",
+            ev.PricePerParticipant.HasValue ? $"עלות: ₪{ev.PricePerParticipant}" : ""
+        }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }

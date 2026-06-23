@@ -9,6 +9,8 @@ import type {
   PaymentRequest,
   VoteRequest,
   EventStatus,
+  ManagerNotificationPreference,
+  NotificationPreference,
 } from '../types'
 
 const base = (id?: string) => `/events${id ? `/${id}` : ''}`
@@ -30,6 +32,8 @@ export const eventsApi = {
     api.post<EventManager>(`${base(eventId)}/persons/managers`, manager),
   removeManager: (eventId: string, managerId: string) =>
     api.delete<void>(`${base(eventId)}/persons/managers/${managerId}`),
+  updateManagerNotifications: (eventId: string, managerId: string, prefs: ManagerNotificationPreference) =>
+    api.patch<void>(`${base(eventId)}/persons/managers/${managerId}/notifications`, prefs),
 
   // ── Participants ──────────────────────────────────────────
   getParticipants: (eventId: string) =>
@@ -38,6 +42,8 @@ export const eventsApi = {
     api.post<Participant>(`${base(eventId)}/participants`, p),
   updateRsvp: (eventId: string, participantId: string, isAttending: boolean) =>
     api.patch<void>(`${base(eventId)}/participants/${participantId}/rsvp`, isAttending),
+  updateParticipantNotifications: (eventId: string, participantId: string, prefs: NotificationPreference) =>
+    api.patch<void>(`${base(eventId)}/participants/${participantId}/notifications`, prefs),
   sendPaymentReminders: (eventId: string) =>
     api.post<void>(`${base(eventId)}/participants/send-payment-reminders`),
 

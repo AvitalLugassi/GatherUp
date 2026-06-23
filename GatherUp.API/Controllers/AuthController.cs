@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using GatherUp.BL.Services;
+using GatherUp.Core.Enums;
 using GatherUp.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,20 +26,20 @@ public class AuthController(AuthService authService, IConfiguration configuratio
     }
 
     /// <summary>
-    /// Admin יוצר משתמש חדש. מחזיר פרטים + סיסמה זמנית — ללא token.
+    /// Admin יוצר משתמש חדש. מחזיר פרטים + סיסמה זמנית.
     /// </summary>
     [Authorize(Roles = "Admin")]
     [HttpPost("create-user")]
     public IActionResult CreateUser([FromBody] CreateUserRequest request)
     {
         var (user, plainPassword) = authService.CreateUser(
-            request.Username, request.Role ?? "User", request.Email ?? "");
+            request.Username, request.Role, request.Email ?? "");
 
         return Ok(new
         {
             user.Id,
             user.Username,
-            user.Role,
+            Role = user.Role.ToString(),
             user.Email,
             temporaryPassword = plainPassword,
         });
@@ -48,7 +49,7 @@ public class AuthController(AuthService authService, IConfiguration configuratio
     [HttpGet("users")]
     public IActionResult GetUsers()
         => Ok(authService.GetAllUsers()
-            .Select(u => new { u.Id, u.Username, u.Role, u.Email }));
+            .Select(u => new { u.Id, u.Username, Role = u.Role.ToString(), u.Email }));
 
     [Authorize(Roles = "Admin")]
     [HttpDelete("users/{id:guid}")]
@@ -67,7 +68,7 @@ public class AuthController(AuthService authService, IConfiguration configuratio
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name,           user.Username),
-            new Claim(ClaimTypes.Role,           user.Role)
+            new Claim(ClaimTypes.Role,           user.Role.ToString())
         };
 
         var token = new JwtSecurityToken(
@@ -81,4 +82,4 @@ public class AuthController(AuthService authService, IConfiguration configuratio
 }
 
 public record LoginRequest(string Username, string Password);
-public record CreateUserRequest(string Username, string? Role, string? Email);
+public record CreateUserRequest(string Username, UserRole Role, string? Email);

@@ -16,7 +16,7 @@ interface QuestionForm {
 }
 
 export function PollsTab({ event, onReload }: Props) {
-  const { isAdmin, username } = useAuth()
+  const { canManage, username } = useAuth()
   const [showCreate, setShowCreate] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
@@ -160,11 +160,11 @@ export function PollsTab({ event, onReload }: Props) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-gray-700">סקרים</h2>
-        {isAdmin && <Button onClick={() => setShowCreate(true)}>+ סקר חדש</Button>}
+        {canManage && <Button onClick={() => setShowCreate(true)}>+ סקר חדש</Button>}
       </div>
 
       {/* הודעה אם המשתמש לא משתתף */}
-      {!isAdmin && !currentParticipant && (
+      {!canManage && !currentParticipant && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm rounded-lg px-4 py-3 mb-4">
           ⚠️ אינך רשום/ה כמשתתף/ת באירוע זה — לא ניתן להצביע
         </div>
@@ -315,13 +315,13 @@ export function PollsTab({ event, onReload }: Props) {
                             )}
 
                             {/* תוצאות (Admin בלבד, לפני שהצביע) */}
-                            {isAdmin && !alreadyVoted && (
+                            {canManage && !alreadyVoted && (
                               <button onClick={() => loadResults(poll.id, q.id)}
                                 className="text-xs text-indigo-500 hover:underline mt-3 block">
                                 הצג תוצאות
                               </button>
                             )}
-                            {isAdmin && !alreadyVoted && res && (
+                            {canManage && !alreadyVoted && res && (
                               <div className="mt-3 space-y-1">
                                 {Object.entries(res).map(([ans, count]) => {
                                   const total = Object.values(res).reduce((a, b) => a + b, 0)

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { eventsApi } from '../../api/events'
 import type { GatherEvent } from '../../types'
-import { PaymentMethod } from '../../types'
+import { PaymentMethod, ManagerNotificationPreference, NotificationPreference } from '../../types'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext'
 interface Props { event: GatherEvent; onReload: () => void }
 
 export function SettingsTab({ event, onReload }: Props) {
-  const { isAdmin } = useAuth()
+  const { canManage } = useAuth()
   const [editLoading, setEditLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -19,6 +19,8 @@ export function SettingsTab({ event, onReload }: Props) {
   const [showManager, setShowManager] = useState(false)
   const [showSendUpdate, setShowSendUpdate] = useState(false)
   const [updateMsg, setUpdateMsg] = useState('')
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [localManagerPrefs, setLocalManagerPrefs] = useState<Record<string, number>>({})
 
   const [form, setForm] = useState({
     title: event.title,
@@ -83,7 +85,7 @@ export function SettingsTab({ event, onReload }: Props) {
     alert(`עדכון נשלח לכל ${event.participants?.length ?? 0} המשתתפים!`)
   }
 
-  if (!isAdmin) {
+  if (!canManage) {
     return (
       <Card className="p-8">
         <h3 className="font-semibold text-gray-700 mb-4">פרטי האירוע</h3>
@@ -181,6 +183,51 @@ export function SettingsTab({ event, onReload }: Props) {
       {/* Notifications */}
       <Card className="p-6">
         <h3 className="font-semibold text-gray-700 mb-4">התראות</h3>
+
+        {/* Manager notification prefs */}
+        {event.managers.length > 0 && (
+          <div className="mb-6">
+            <p className="text-sm font-medium text-gray-600 mb-3">העדפות התראות מנהלים</p>
+            <div className="space-y-3">
+              {event.managers.map(manager => (
+                <div key={manager.id} className="border rounded-lg p-3">
+                  <p className="text-sm font-medium text-gray-700 mb-2">{manager.name}</p>
+                  <div className="flex flex-wrap gap-4">
+                    {([
+                      { flag: ManagerNotificationPreference.RsvpReceived,    label: 'אישור הגעה' },
+                      { flag: ManagerNotificationPreference.PaymentReceived, label: 'תשלום' },
+                      { flag: ManagerNotificationPreference.VoteSubmitted,   label: 'הצבעה בסקר' },
+                    ] as const).map(({ flag, label }) => (
+                      <label key={flag} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={!!((localManagerPrefs[manager.id] ?? manager.notificationPreferences) & flag)}
+                          disabled={notifLoading}
+                          onChange={async () => {
+                            const current = (localManagerPrefs[manager.id] ?? manager.notificationPreferences) as ManagerNotificationPreference
+                            const newPref = (current ^ flag) as ManagerNotificationPreference
+                            setLocalManagerPrefs(p => ({ ...p, [manager.id]: newPref }))
+                            setNotifLoading(true)
+                            try {
+                              await eventsApi.updateManagerNotifications(event.id, manager.id, newPref)
+                              onReload()
+                            } catch {
+                              setLocalManagerPrefs(p => ({ ...p, [manager.id]: current })) // rollback
+                            } finally {
+                              setNotifLoading(false)
+                            }
+                          }}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Button variant="secondary" onClick={() => setShowSendUpdate(true)}>שלח עדכון לכל המשתתפים</Button>
       </Card>
 

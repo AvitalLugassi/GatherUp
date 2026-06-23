@@ -49,7 +49,7 @@ export function CreateEventPage() {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-600 text-2xl">←</button>
-        <h1 className="text-2xl font-bold text-gray-800">אירוע חדש</h1>
+        <h1 className="text-3xl font-bold text-gray-900">אירוע חדש</h1>
       </div>
 
       <form onSubmit={handleSubmit}>

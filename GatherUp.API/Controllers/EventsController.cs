@@ -11,7 +11,10 @@ namespace GatherUp.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class EventsController(EventService eventService, NotificationService notificationService) : ControllerBase
+public class EventsController(
+    EventService eventService,
+    NotificationService notificationService,
+    AuthorizationService authorizationService) : ControllerBase
 {
     [AllowAnonymous]
     [HttpGet]
@@ -27,6 +30,7 @@ public class EventsController(EventService eventService, NotificationService not
             : Ok(ev);
     }
 
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
     public IActionResult Create(GatherEvent gatherEvent)
     {
@@ -34,12 +38,14 @@ public class EventsController(EventService eventService, NotificationService not
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPut("{id:guid}")]
     public IActionResult Update(Guid id, GatherEvent gatherEvent)
     {
         if (id != gatherEvent.Id)
             throw new ValidationException("מזהה האירוע אינו תואם.");
-        if (!IsOwnerOrAdmin(id)) return Forbid();
+        if (!authorizationService.IsManagerOrAdmin(CurrentUserId(), CurrentRole(), id))
+            return Forbid();
         return Ok(eventService.Update(gatherEvent));
     }
 
@@ -51,35 +57,67 @@ public class EventsController(EventService eventService, NotificationService not
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPatch("{id:guid}/status")]
     public IActionResult UpdateStatus(Guid id, [FromBody] EventStatus newStatus)
     {
-        if (!IsOwnerOrAdmin(id)) return Forbid();
+        if (!authorizationService.IsManagerOrAdmin(CurrentUserId(), CurrentRole(), id))
+            return Forbid();
         eventService.UpdateStatus(id, newStatus);
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Manager")]
+    [HttpPut("{id:guid}/host")]
+    public IActionResult SetHost(Guid id, EventHost host)
+    {
+        if (!authorizationService.IsManagerOrAdmin(CurrentUserId(), CurrentRole(), id))
+            return Forbid();
+        return Ok(eventService.SetHost(id, host));
+    }
+
+    [Authorize(Roles = "Admin,Manager")]
+    [HttpPost("{id:guid}/managers")]
+    public IActionResult AddManager(Guid id, EventManager manager)
+    {
+        if (!authorizationService.IsManagerOrAdmin(CurrentUserId(), CurrentRole(), id))
+            return Forbid();
+        return Ok(eventService.AddManager(id, manager));
+    }
+
+    [Authorize(Roles = "Admin,Manager")]
+    [HttpDelete("{id:guid}/managers/{managerId:guid}")]
+    public IActionResult RemoveManager(Guid id, Guid managerId)
+    {
+        if (!authorizationService.IsManagerOrAdmin(CurrentUserId(), CurrentRole(), id))
+            return Forbid();
+        eventService.RemoveManager(id, managerId);
+        return NoContent();
+    }
+
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost("{id:guid}/send-invitations")]
     public IActionResult SendInvitations(Guid id)
     {
+        if (!authorizationService.IsManagerOrAdmin(CurrentUserId(), CurrentRole(), id))
+            return Forbid();
         notificationService.SendInvitations(id);
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Manager")]
     [HttpPost("{id:guid}/send-update")]
     public IActionResult SendUpdate(Guid id, [FromBody] string message)
     {
+        if (!authorizationService.IsManagerOrAdmin(CurrentUserId(), CurrentRole(), id))
+            return Forbid();
         notificationService.SendEventUpdate(id, message);
         return NoContent();
     }
 
-
     private Guid CurrentUserId() =>
         Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-    private bool IsOwnerOrAdmin(Guid eventId)
-    {
-        var ev = eventService.GetById(eventId);
-        return ev?.Host?.Id == CurrentUserId() || User.IsInRole("Admin");
-    }
+    private UserRole CurrentRole() =>
+        Enum.Parse<UserRole>(User.FindFirst(ClaimTypes.Role)!.Value);
 }
