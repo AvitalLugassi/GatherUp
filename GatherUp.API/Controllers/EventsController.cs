@@ -73,7 +73,6 @@ public class EventsController(EventService eventService, NotificationService not
         return NoContent();
     }
 
-    // --- helpers ---
 
     private Guid CurrentUserId() =>
         Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);

@@ -19,7 +19,6 @@ public class ParticipantsController(ParticipantService participantService, Notif
     {
         var added = participantService.AddParticipant(eventId, participant);
 
-        // שליחת מייל עם פרטי ההתחברות למשתתף שנרשם
         notificationService.SendWelcomeToParticipant(eventId, added);
 
         return CreatedAtAction(nameof(GetAll), new { eventId }, added);

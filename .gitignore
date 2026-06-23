@@ -15,6 +15,9 @@ obj/
 # קובץ ההוראות
 *.docx
 
+# Secrets
+GatherUp.API/appsettings.json
+
 # Data files
 GatherUp.Infrastructure/Data/events.xml
 

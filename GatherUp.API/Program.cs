@@ -61,7 +61,14 @@ builder.Services.AddSingleton(
     _ => new VotesXmlRepository(Path.Combine(dataPath, "votes.xml")));
 
 // --- Infrastructure ---
-builder.Services.AddSingleton<IEmailService, EmailService>();
+// --- Infrastructure ---
+var emailConfig = builder.Configuration.GetSection("Email");
+builder.Services.AddSingleton<IEmailService>(_ => new EmailService(
+    emailConfig["From"]!,
+    emailConfig["Password"]!,
+    emailConfig["Host"]!,
+    int.Parse(emailConfig["Port"]!)
+));
 
 // --- Services ---
 builder.Services.AddScoped<EventService>();

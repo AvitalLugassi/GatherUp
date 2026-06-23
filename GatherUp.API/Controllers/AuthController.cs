@@ -34,7 +34,6 @@ public class AuthController(AuthService authService, IConfiguration configuratio
         var (user, plainPassword) = authService.CreateUser(
             request.Username, request.Role ?? "User", request.Email ?? "");
 
-        // מחזירים את פרטי המשתמש + הסיסמה הזמנית בלבד — ללא token
         return Ok(new
         {
             user.Id,
