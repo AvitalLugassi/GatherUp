@@ -24,6 +24,40 @@ public class AuthController(AuthService authService, IConfiguration configuratio
         return Ok(new { token = GenerateToken(user) });
     }
 
+    /// <summary>
+    /// Admin יוצר משתמש חדש. מחזיר פרטים + סיסמה זמנית — ללא token.
+    /// </summary>
+    [Authorize(Roles = "Admin")]
+    [HttpPost("create-user")]
+    public IActionResult CreateUser([FromBody] CreateUserRequest request)
+    {
+        var (user, plainPassword) = authService.CreateUser(
+            request.Username, request.Role ?? "User");
+
+        // מחזירים את פרטי המשתמש + הסיסמה הזמנית בלבד — ללא token
+        return Ok(new
+        {
+            user.Id,
+            user.Username,
+            user.Role,
+            temporaryPassword = plainPassword,
+        });
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("users")]
+    public IActionResult GetUsers()
+        => Ok(authService.GetAllUsers()
+            .Select(u => new { u.Id, u.Username, u.Role }));
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("users/{id:guid}")]
+    public IActionResult DeleteUser(Guid id)
+    {
+        authService.DeleteUser(id);
+        return NoContent();
+    }
+
     private string GenerateToken(AppUser user)
     {
         var key = configuration["Jwt:Key"] ?? "GatherUp_SuperSecret_Key_2024!@#$";
@@ -47,3 +81,4 @@ public class AuthController(AuthService authService, IConfiguration configuratio
 }
 
 public record LoginRequest(string Username, string Password);
+public record CreateUserRequest(string Username, string? Role);

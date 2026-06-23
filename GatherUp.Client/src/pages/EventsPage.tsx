@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { eventsApi } from '../api/events'
 import type { GatherEvent } from '../types'
-import { EventStatus, EventStatusLabels } from '../types'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { StatusBadge } from '../components/ui/Badge'
@@ -13,14 +12,28 @@ export function EventsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const navigate = useNavigate()
-  const { isAdmin } = useAuth()
+  const { isAdmin, username } = useAuth()
 
   useEffect(() => {
     eventsApi.getAll()
-      .then(setEvents)
+      .then(all => {
+        if (isAdmin) {
+          // Admin רואה הכל
+          setEvents(all)
+        } else {
+          // משתמש רגיל רואה רק אירועים שהוא משתתף בהם (לפי שם משתמש / אימייל)
+          const mine = all.filter(ev =>
+            ev.participants?.some(p =>
+              p.email?.toLowerCase() === username?.toLowerCase() ||
+              p.name?.toLowerCase() === username?.toLowerCase()
+            )
+          )
+          setEvents(mine)
+        }
+      })
       .catch(() => setError('שגיאה בטעינת האירועים'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [isAdmin, username])
 
   if (loading) return (
     <div className="flex justify-center items-center h-64">
@@ -35,7 +48,9 @@ export function EventsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">האירועים שלי</h1>
+        <h1 className="text-2xl font-bold text-gray-800">
+          {isAdmin ? 'כל האירועים' : 'האירועים שלי'}
+        </h1>
         {isAdmin && (
           <Button onClick={() => navigate('/events/new')}>+ אירוע חדש</Button>
         )}
@@ -44,7 +59,9 @@ export function EventsPage() {
       {events.length === 0 ? (
         <Card className="p-12 text-center">
           <div className="text-5xl mb-4">📅</div>
-          <p className="text-gray-500">אין אירועים עדיין</p>
+          <p className="text-gray-500">
+            {isAdmin ? 'אין אירועים עדיין' : 'אין אירועים שאת/ה משתתף/ת בהם'}
+          </p>
           {isAdmin && (
             <Button className="mt-4" onClick={() => navigate('/events/new')}>צור אירוע ראשון</Button>
           )}
