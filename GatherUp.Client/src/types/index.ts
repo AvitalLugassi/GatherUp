@@ -43,6 +43,7 @@ export interface AppUser {
   id: string
   username: string
   role: string
+  email?: string
 }
 
 export interface Person {

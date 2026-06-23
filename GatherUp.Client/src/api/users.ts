@@ -4,6 +4,7 @@ export interface AppUserDto {
   id: string
   username: string
   role: string
+  email?: string
 }
 
 export interface CreateUserResponse extends AppUserDto {
@@ -14,7 +15,7 @@ export const usersApi = {
   getAll: () =>
     api.get<AppUserDto[]>('/auth/users'),
 
-  create: (data: { username: string; role?: string }) =>
+  create: (data: { username: string; role?: string; email?: string }) =>
     api.post<CreateUserResponse>('/auth/create-user', data),
 
   delete: (id: string) =>

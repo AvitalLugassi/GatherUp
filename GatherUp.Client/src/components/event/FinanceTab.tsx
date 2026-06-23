@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext'
 interface Props { event: GatherEvent; onReload: () => void }
 
 export function FinanceTab({ event, onReload }: Props) {
-  const { isAdmin } = useAuth()
+  const { isAdmin, username } = useAuth()
   const [showVendor, setShowVendor] = useState(false)
   const [showPayment, setShowPayment] = useState<Participant | null>(null)
   const [vendorForm, setVendorForm] = useState({ name: '', amountOwed: '' })
@@ -21,6 +21,13 @@ export function FinanceTab({ event, onReload }: Props) {
 
   const vendors = event.vendors ?? []
   const participants = event.participants ?? []
+
+  // המשתתף המחובר
+  const currentParticipant = participants.find(
+    p => p.email?.toLowerCase() === username?.toLowerCase() ||
+         p.name?.toLowerCase() === username?.toLowerCase()
+  )
+
   const totalCollected = participants.reduce((s, p) => s + (p.amountPaid ?? 0), 0)
   const totalVendors = vendors.reduce((s, v) => s + v.amountOwed, 0)
 
@@ -57,9 +64,62 @@ export function FinanceTab({ event, onReload }: Props) {
     finally { setLoading(false) }
   }
 
+  // תצוגה למשתמש רגיל — רק פרטי התשלום שלו
+  if (!isAdmin) {
+    if (!currentParticipant) {
+      return (
+        <Card className="p-8 text-center text-gray-400">
+          אינך רשום/ה כמשתתף/ת באירוע זה
+        </Card>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        <Card className="p-6">
+          <h3 className="font-semibold text-gray-700 mb-4">מצב התשלום שלי</h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between items-center py-2 border-b">
+              <span className="text-gray-500">סכום לתשלום</span>
+              <span className="font-semibold text-gray-800">
+                {event.pricePerParticipant ? `₪${event.pricePerParticipant}` : 'לא הוגדר'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b">
+              <span className="text-gray-500">סטטוס תשלום</span>
+              {currentParticipant.hasPaid
+                ? <span className="text-green-600 font-medium">✓ שולם (₪{currentParticipant.amountPaid})</span>
+                : <span className="text-red-500 font-medium">טרם שולם</span>
+              }
+            </div>
+            {!currentParticipant.hasPaid && (
+              <div className="flex justify-between items-center py-2 border-b">
+                <span className="text-gray-500">אמצעי תשלום</span>
+                <span className="text-gray-700">{PaymentMethodLabels[event.paymentMethod]}</span>
+              </div>
+            )}
+            {!currentParticipant.hasPaid && event.paymentMethod === PaymentMethod.BankTransfer && event.bankDetails && (
+              <div className="py-2 border-b">
+                <p className="text-gray-500 mb-1">פרטי חשבון בנק</p>
+                <p className="text-gray-700 font-medium">{event.bankDetails}</p>
+              </div>
+            )}
+            {!currentParticipant.hasPaid && event.paymentMethod === PaymentMethod.Cash && event.cashContactName && (
+              <div className="py-2 border-b">
+                <p className="text-gray-500 mb-1">תשלום מזומן אצל</p>
+                <p className="text-gray-700 font-medium">{event.cashContactName}</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
+  // תצוגה מלאה למנהל
   return (
     <div className="space-y-6">
-      {/* Summary */}
+      {/* סיכום תקציב */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="p-4 text-center">
           <p className="text-xs text-gray-500 mb-1">נגבה</p>
@@ -77,7 +137,7 @@ export function FinanceTab({ event, onReload }: Props) {
         </Card>
       </div>
 
-      {/* Participants payments */}
+      {/* תשלומי משתתפים */}
       <Card>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <h3 className="font-semibold text-gray-700">תשלומי משתתפים</h3>
@@ -88,7 +148,7 @@ export function FinanceTab({ event, onReload }: Props) {
               <th className="px-4 py-3 font-medium">שם</th>
               <th className="px-4 py-3 font-medium">סכום ששולם</th>
               <th className="px-4 py-3 font-medium">סטטוס</th>
-              {isAdmin && <th className="px-4 py-3 font-medium">פעולה</th>}
+              <th className="px-4 py-3 font-medium">פעולה</th>
             </tr>
           </thead>
           <tbody>
@@ -102,26 +162,24 @@ export function FinanceTab({ event, onReload }: Props) {
                     : <span className="text-gray-400">ממתין</span>
                   }
                 </td>
-                {isAdmin && (
-                  <td className="px-4 py-3">
-                    {!p.hasPaid && (
-                      <button onClick={() => setShowPayment(p)} className="text-xs text-indigo-500 hover:underline">
-                        סמן כשולם
-                      </button>
-                    )}
-                  </td>
-                )}
+                <td className="px-4 py-3">
+                  {!p.hasPaid && (
+                    <button onClick={() => setShowPayment(p)} className="text-xs text-indigo-500 hover:underline">
+                      סמן כשולם
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </Card>
 
-      {/* Vendors */}
+      {/* ספקים */}
       <Card>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <h3 className="font-semibold text-gray-700">ספקים</h3>
-          {isAdmin && <Button onClick={() => setShowVendor(true)}>+ ספק</Button>}
+          <Button onClick={() => setShowVendor(true)}>+ ספק</Button>
         </div>
         {vendors.length === 0 ? (
           <p className="text-center text-gray-400 py-8">אין ספקים</p>
@@ -131,7 +189,7 @@ export function FinanceTab({ event, onReload }: Props) {
               <tr className="border-b bg-gray-50 text-gray-500 text-right">
                 <th className="px-4 py-3 font-medium">שם ספק</th>
                 <th className="px-4 py-3 font-medium">סכום</th>
-                {isAdmin && <th className="px-4 py-3 font-medium"></th>}
+                <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -139,11 +197,9 @@ export function FinanceTab({ event, onReload }: Props) {
                 <tr key={v.id} className="border-b last:border-0">
                   <td className="px-4 py-3">{v.name}</td>
                   <td className="px-4 py-3">₪{v.amountOwed.toLocaleString()}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3 text-left">
-                      <button onClick={() => deleteVendor(v.id)} className="text-xs text-red-400 hover:text-red-600">מחק</button>
-                    </td>
-                  )}
+                  <td className="px-4 py-3 text-left">
+                    <button onClick={() => deleteVendor(v.id)} className="text-xs text-red-400 hover:text-red-600">מחק</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -151,7 +207,7 @@ export function FinanceTab({ event, onReload }: Props) {
         )}
       </Card>
 
-      {/* Vendor modal */}
+      {/* מודל ספק */}
       {showVendor && (
         <Modal title="הוספת ספק" onClose={() => setShowVendor(false)}>
           <div className="space-y-4">
@@ -168,7 +224,7 @@ export function FinanceTab({ event, onReload }: Props) {
         </Modal>
       )}
 
-      {/* Payment modal */}
+      {/* מודל תשלום */}
       {showPayment && (
         <Modal title={`סימון תשלום — ${showPayment.name}`} onClose={() => setShowPayment(null)}>
           <div className="space-y-4">

@@ -18,6 +18,10 @@ public class ParticipantsController(ParticipantService participantService, Notif
     public IActionResult Add(Guid eventId, Participant participant)
     {
         var added = participantService.AddParticipant(eventId, participant);
+
+        // שליחת מייל עם פרטי ההתחברות למשתתף שנרשם
+        notificationService.SendWelcomeToParticipant(eventId, added);
+
         return CreatedAtAction(nameof(GetAll), new { eventId }, added);
     }
 

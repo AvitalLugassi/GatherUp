@@ -57,6 +57,8 @@ builder.Services.AddSingleton<IRepository<GatherEvent>>(
     _ => new XmlRepository<GatherEvent>(Path.Combine(dataPath, "events.xml")));
 builder.Services.AddSingleton<IUserRepository>(
     _ => new UserRepository(Path.Combine(dataPath, "users.xml")));
+builder.Services.AddSingleton(
+    _ => new VotesXmlRepository(Path.Combine(dataPath, "votes.xml")));
 
 // --- Infrastructure ---
 builder.Services.AddSingleton<IEmailService, EmailService>();

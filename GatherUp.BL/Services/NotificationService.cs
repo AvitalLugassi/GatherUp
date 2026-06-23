@@ -55,7 +55,7 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
     }
 
     /// <summary>
-    /// שליחת עדכון לכל המשתתפים שבחרו לקבל שינויי אירוע.
+    /// שליחת עדכון לכל המשתתפים (ללא קשר להעדפות התראה).
     /// </summary>
     public void SendEventUpdate(Guid eventId, string updateMessage)
     {
@@ -63,7 +63,7 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
             ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
 
         var recipients = ev.Participants
-            .Where(p => p.NotificationPreferences.HasFlag(NotificationPreference.EventChanges))
+            .Where(p => !string.IsNullOrWhiteSpace(p.Email))
             .Select(p => p.Email)
             .ToList();
 
@@ -72,7 +72,7 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
         emailService.SendBulk(recipients, $"עדכון: {ev.Title}", updateMessage);
     }
 
-     public void NotifyNewPoll(Guid eventId, Poll poll)
+    public void NotifyNewPoll(Guid eventId, Poll poll)
     {
         var ev = eventRepo.GetById(eventId)
             ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
@@ -87,6 +87,33 @@ public class NotificationService(IEmailService emailService, IRepository<GatherE
         var subject = $"סקר חדש: {poll.Title}";
         var body = $"נפתח סקר חדש '{poll.Title}' לאירוע '{ev.Title}'.\nהסקר פתוח עד: {poll.ClosesAt?.ToShortDateString()}";
         emailService.SendBulk(recipients, subject, body);
+    }
+
+    /// <summary>
+    /// שולח למשתתף מייל ברגע שנרשם לאירוע, עם שם המשתמש והסיסמה שלו.
+    /// </summary>
+    public void SendWelcomeToParticipant(Guid eventId, Participant participant)
+    {
+        var ev = eventRepo.GetById(eventId)
+            ?? throw new NotFoundException($"אירוע {eventId} לא נמצא.");
+
+        if (string.IsNullOrWhiteSpace(participant.Email)) return;
+
+        var subject = $"הוזמנת לאירוע: {ev.Title}";
+        var body = $@"<div dir='rtl'>
+<h2>שלום {participant.Name},</h2>
+<p>נרשמת לאירוע <strong>{ev.Title}</strong>.</p>
+{(ev.EventDate.HasValue ? $"<p>📅 תאריך: {ev.EventDate.Value.ToShortDateString()}</p>" : "")}
+{(!string.IsNullOrWhiteSpace(ev.Location) ? $"<p>📍 מיקום: {ev.Location}</p>" : "")}
+{(ev.PricePerParticipant.HasValue ? $"<p>💰 עלות: ₪{ev.PricePerParticipant}</p>" : "")}
+{(!string.IsNullOrWhiteSpace(ev.CustomMessage) ? $"<p>{ev.CustomMessage}</p>" : "")}
+<hr/>
+<p><strong>פרטי כניסה למערכת:</strong></p>
+<p>שם משתמש: {participant.Email}</p>
+<p>(הסיסמה שלך נשלחה אליך בנפרד, אם נוצר עבורך חשבון)</p>
+</div>";
+
+        emailService.Send(participant.Email, subject, body);
     }
 
     private static string BuildInvitationBody(GatherEvent ev)

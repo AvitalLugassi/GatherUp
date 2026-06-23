@@ -18,14 +18,13 @@ export function EventsPage() {
     eventsApi.getAll()
       .then(all => {
         if (isAdmin) {
-          // Admin רואה הכל
           setEvents(all)
         } else {
-          // משתמש רגיל רואה רק אירועים שהוא משתתף בהם (לפי שם משתמש / אימייל)
+          // משתמש רגיל רואה רק אירועים שהוא משתתף בהם
+          // username שווה ל-email כי כך נוצר החשבון (username = email)
           const mine = all.filter(ev =>
             ev.participants?.some(p =>
-              p.email?.toLowerCase() === username?.toLowerCase() ||
-              p.name?.toLowerCase() === username?.toLowerCase()
+              p.email?.toLowerCase() === username?.toLowerCase()
             )
           )
           setEvents(mine)
@@ -59,11 +58,18 @@ export function EventsPage() {
       {events.length === 0 ? (
         <Card className="p-12 text-center">
           <div className="text-5xl mb-4">📅</div>
-          <p className="text-gray-500">
+          <p className="text-gray-500 mb-1">
             {isAdmin ? 'אין אירועים עדיין' : 'אין אירועים שאת/ה משתתף/ת בהם'}
           </p>
+          {!isAdmin && (
+            <p className="text-xs text-gray-400">
+              כשמנהל יוסיף אותך לאירוע, הוא יופיע כאן
+            </p>
+          )}
           {isAdmin && (
-            <Button className="mt-4" onClick={() => navigate('/events/new')}>צור אירוע ראשון</Button>
+            <Button className="mt-4" onClick={() => navigate('/events/new')}>
+              צור אירוע ראשון
+            </Button>
           )}
         </Card>
       ) : (
@@ -71,7 +77,7 @@ export function EventsPage() {
           {events.map(event => (
             <Card
               key={event.id}
-              className="p-5 cursor-pointer hover:shadow-md transition-shadow"
+              className="p-5 cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all"
               onClick={() => navigate(`/events/${event.id}`)}
             >
               <div className="flex items-start justify-between mb-3">
@@ -87,6 +93,28 @@ export function EventsPage() {
                 {event.pricePerParticipant != null && event.pricePerParticipant > 0 && (
                   <p>💰 ₪{event.pricePerParticipant} לאדם</p>
                 )}
+              </div>
+              <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between items-center">
+                <span className="text-xs text-indigo-500 font-medium">
+                  {isAdmin ? 'לחץ לניהול →' : 'לחץ לפרטים →'}
+                </span>
+                {!isAdmin && event.participants && (() => {
+                  const me = event.participants.find(
+                    p => p.email?.toLowerCase() === username?.toLowerCase()
+                  )
+                  if (!me) return null
+                  return (
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      me.isAttending === true
+                        ? 'bg-green-100 text-green-700'
+                        : me.isAttending === false
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {me.isAttending === true ? '✓ אישרתי הגעה' : me.isAttending === false ? '✗ דחיתי' : '? טרם הגבתי'}
+                    </span>
+                  )
+                })()}
               </div>
             </Card>
           ))}

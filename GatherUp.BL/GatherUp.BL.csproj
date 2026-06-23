@@ -11,5 +11,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GatherUp.Core\GatherUp.Core.csproj" />
+    <ProjectReference Include="..\GatherUp.Infrastructure\GatherUp.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

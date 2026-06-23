@@ -3,7 +3,7 @@ using GatherUp.Core.Models;
 
 namespace GatherUp.BL.Services;
 
-public class AuthService(IUserRepository userRepository)
+public class AuthService(IUserRepository userRepository, IEmailService emailService)
 {
     public AppUser? ValidateUser(string username, string password)
     {
@@ -14,10 +14,10 @@ public class AuthService(IUserRepository userRepository)
     }
 
     /// <summary>
-    /// Admin יוצר משתמש חדש. מחזיר את הסיסמה הזמנית — פעם אחת בלבד.
+    /// Admin יוצר משתמש חדש. מחזיר את הסיסמה הזמנית ושולח מייל למשתמש.
     /// </summary>
     public (AppUser user, string plainPassword) CreateUser(
-        string username, string role = "User")
+        string username, string role = "User", string email = "")
     {
         if (userRepository.GetByUsername(username) is not null)
             throw new Core.Exceptions.BusinessRuleException($"שם המשתמש '{username}' כבר קיים.");
@@ -27,9 +27,25 @@ public class AuthService(IUserRepository userRepository)
         {
             Username     = username,
             Role         = role,
+            Email        = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(plainPassword),
         };
         userRepository.Add(user);
+
+        // שליחת מייל עם פרטי ההתחברות, אם סופק מייל
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var subject = "ברוכים הבאים ל-GatherUp — פרטי ההתחברות שלך";
+            var body = $@"<div dir='rtl'>
+<h2>שלום {username},</h2>
+<p>נוצר עבורך חשבון במערכת GatherUp.</p>
+<p><strong>שם משתמש:</strong> {username}</p>
+<p><strong>סיסמה זמנית:</strong> {plainPassword}</p>
+<p>אנא התחבר/י ושנה/י את הסיסמה בהקדם.</p>
+</div>";
+            emailService.Send(email, subject, body);
+        }
+
         return (user, plainPassword);
     }
 

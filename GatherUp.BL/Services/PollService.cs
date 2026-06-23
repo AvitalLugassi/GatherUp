@@ -1,10 +1,11 @@
 using GatherUp.Core.Exceptions;
 using GatherUp.Core.Interfaces;
 using GatherUp.Core.Models;
+using GatherUp.Infrastructure.Repositories;
 
 namespace GatherUp.BL.Services;
 
-public class PollService(IRepository<GatherEvent> eventRepo)
+public class PollService(IRepository<GatherEvent> eventRepo, VotesXmlRepository votesRepo)
 {
     public Poll AddPoll(Guid eventId, Poll poll)
     {
@@ -28,6 +29,7 @@ public class PollService(IRepository<GatherEvent> eventRepo)
 
     /// <summary>
     /// רישום הצבעה של משתתף על שאלה בסקר.
+    /// ההצבעה נשמרת ב-VotesXmlRepository לצמיתות.
     /// </summary>
     public void Vote(Guid eventId, Guid pollId, Guid questionId, Guid participantId, string answer)
     {
@@ -46,13 +48,17 @@ public class PollService(IRepository<GatherEvent> eventRepo)
         if (!question.Options.Contains(answer))
             throw new ValidationException($"תשובה '{answer}' אינה אפשרות חוקית.");
 
-        question.VotesByParticipant[participantId] = answer;
+        // שמירה קבועה ב-XML
+        votesRepo.SaveVote(eventId, pollId, questionId, participantId, answer);
 
-        // VotesByParticipant הוא XmlIgnore — נשמר רק ב-memory בזמן ריצה.
-        // לשמירה מתמשכת יש להשתמש ב-VoteXmlRepository (ניתן להרחיב בעתיד).
+        // עדכון ב-memory לצורך consistency בתוך אותו request
+        question.VotesByParticipant[participantId] = answer;
         eventRepo.Update(ev);
     }
 
+    /// <summary>
+    /// חישוב תוצאות הצבעה — קורא מ-VotesXmlRepository (קבוע).
+    /// </summary>
     public Dictionary<string, int> GetResults(Guid eventId, Guid pollId, Guid questionId)
     {
         var ev = eventRepo.GetById(eventId)
@@ -61,10 +67,13 @@ public class PollService(IRepository<GatherEvent> eventRepo)
         var poll = ev.Polls.FirstOrDefault(p => p.Id == pollId)
             ?? throw new NotFoundException($"סקר {pollId} לא נמצא.");
 
-        var question = poll.Questions.FirstOrDefault(q => q.Id == questionId)
-            ?? throw new NotFoundException($"שאלה {questionId} לא נמצאה.");
+        if (poll.Questions.All(q => q.Id != questionId))
+            throw new NotFoundException($"שאלה {questionId} לא נמצאה.");
 
-        return question.VotesByParticipant
+        // טעינה מה-XML הקבוע
+        var votes = votesRepo.LoadVotes(eventId, pollId, questionId);
+
+        return votes
             .GroupBy(v => v.Value)
             .ToDictionary(g => g.Key, g => g.Count());
     }

@@ -80,7 +80,7 @@ export function SettingsTab({ event, onReload }: Props) {
     await eventsApi.sendUpdate(event.id, updateMsg)
     setShowSendUpdate(false)
     setUpdateMsg('')
-    alert('עדכון נשלח!')
+    alert(`עדכון נשלח לכל ${event.participants?.length ?? 0} המשתתפים!`)
   }
 
   if (!isAdmin) {

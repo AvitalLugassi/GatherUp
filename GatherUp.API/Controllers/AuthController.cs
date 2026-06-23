@@ -32,7 +32,7 @@ public class AuthController(AuthService authService, IConfiguration configuratio
     public IActionResult CreateUser([FromBody] CreateUserRequest request)
     {
         var (user, plainPassword) = authService.CreateUser(
-            request.Username, request.Role ?? "User");
+            request.Username, request.Role ?? "User", request.Email ?? "");
 
         // מחזירים את פרטי המשתמש + הסיסמה הזמנית בלבד — ללא token
         return Ok(new
@@ -40,6 +40,7 @@ public class AuthController(AuthService authService, IConfiguration configuratio
             user.Id,
             user.Username,
             user.Role,
+            user.Email,
             temporaryPassword = plainPassword,
         });
     }
@@ -48,7 +49,7 @@ public class AuthController(AuthService authService, IConfiguration configuratio
     [HttpGet("users")]
     public IActionResult GetUsers()
         => Ok(authService.GetAllUsers()
-            .Select(u => new { u.Id, u.Username, u.Role }));
+            .Select(u => new { u.Id, u.Username, u.Role, u.Email }));
 
     [Authorize(Roles = "Admin")]
     [HttpDelete("users/{id:guid}")]
@@ -81,4 +82,4 @@ public class AuthController(AuthService authService, IConfiguration configuratio
 }
 
 public record LoginRequest(string Username, string Password);
-public record CreateUserRequest(string Username, string? Role);
+public record CreateUserRequest(string Username, string? Role, string? Email);
